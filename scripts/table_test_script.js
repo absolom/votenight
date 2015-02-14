@@ -28,6 +28,9 @@ function handleDrop(e) {
 
 		//// Tell the server of the change
 		// TODO: Implement
+		// req = new XMLHttpRequest();
+		// req.open("POST", "", false);
+		// req.send();
 	}
 
 	return false;
