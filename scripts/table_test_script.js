@@ -14,6 +14,14 @@ function handleDrop(e) {
 	}
 
 	if (dragSrcEl != this) {
+		//// Figure out the ranks of the rows being dragged or dropped
+
+		// Store the rank of the row on which the drop occurred
+		targRow = this.getElementsByClassName("rank")[0].innerHTML;
+		
+		// Store the rank of the row which is being dragged
+		srcRow = dragSrcEl.getElementsByClassName("rank")[0].innerHTML;
+
 		//// Update the local HTML
 
 		// Copy the destination row's game name to the source row
@@ -27,10 +35,10 @@ function handleDrop(e) {
 		// TODO: Change the drop behavior from swapping to inserting
 
 		//// Tell the server of the change
-		// TODO: Implement
-		// req = new XMLHttpRequest();
-		// req.open("POST", "", false);
-		// req.send();
+
+		req = new XMLHttpRequest();
+		req.open("GET", "table_test.html?src=" + srcRow + "&dest=" + targRow, false);
+		req.send();
 	}
 
 	return false;

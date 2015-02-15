@@ -9,6 +9,8 @@ handlers:
   static_dir: stylesheets
 - url: /scripts
   static_dir: scripts
+- url: /table_test.*
+  script: table_test.application
 - url: /.*
   script: table_test.application
 
