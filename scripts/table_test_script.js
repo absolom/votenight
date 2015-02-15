@@ -37,7 +37,7 @@ function handleDrop(e) {
 		//// Tell the server of the change
 
 		req = new XMLHttpRequest();
-		req.open("GET", "table_test.html?src=" + srcRow + "&dest=" + targRow, false);
+		req.open("GET", "table_test.html?src=" + srcRow + "&dest=" + targRow, true);
 		req.send();
 	}
 
