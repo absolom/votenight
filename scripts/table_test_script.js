@@ -35,9 +35,10 @@ function handleDrop(e) {
 		// TODO: Change the drop behavior from swapping to inserting
 
 		//// Tell the server of the change
+		var name = document.getElementById("username").innerHTML;
 
 		req = new XMLHttpRequest();
-		req.open("GET", "table_test.html?src=" + srcRow + "&dest=" + targRow, true);
+		req.open("GET", "table_test.html?username=" + name + "&src=" + srcRow + "&dest=" + targRow, true);
 		req.send();
 	}
 
@@ -62,8 +63,44 @@ function handleDragEnd(e) {
 
 }
 
-var rows = document.querySelectorAll('#candidates .row');
+// Makes the rows draggable
+function votingEnable() {
+	// Find every table element and set draggable property to true
+	rows = document.getElementsByClassName('rowNoDrag');
+
+	// I have no idea why the code below works, but it was the only way
+	// I could get all the rows to be updated
+	var i;
+	for (i = 0; i < rows.length; i++) {
+		rows[i].setAttribute('draggable', 'true');
+	}
+	var max = rows.length;
+	for (i = 0; i < max; i++) {
+		// Apparently changing the class adjusts the 'rows' variable
+		// automatically???  But not if you combine this for loop with
+		// the one above it???
+		rows[0].setAttribute('class', 'row'); 
+	}
+}
+
+// Disables dragging of the rows
+function votingDisable() {
+	// Find every table element and set draggable property to false
+	rows = document.getElementsByClassName('row');
+
+	var i;
+	for (i = 0; i < rows.length; i++) {
+		rows[i].setAttribute('draggable', 'false');
+	}
+	var max = rows.length;
+	for (i = 0; i < max; i++) {
+		rows[0].setAttribute('class', 'rowNoDrag');
+	}
+}
+
+var rows = document.querySelectorAll('#candidates .rowNoDrag');
 [].forEach.call(rows, function(row) {
+	// Register DnD event handlers
 	row.addEventListener('dragstart', handleDragStart, false);
     row.addEventListener('dragenter', handleDragEnter, false)
     row.addEventListener('dragover', handleDragOver, false);

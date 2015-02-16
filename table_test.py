@@ -34,53 +34,64 @@ class MainPage(webapp2.RequestHandler):
         If the URI contains a 'src' and 'dest' parameter which specify two
         different ranks, the games for those ranks will be swapped.
         """
+        table_contents = [];
+        template_values = {};
 
         #### Get the User instance for the current user
-        usr = User.query(User.name == 'DefaultUser').get();
-
-        # TODO: Handle not finding the current user
-
+        usrName = '';
+        usr = None;
         try:
-            #### Pull parameters from the URI
-
-            # Grab the target rank for the operation
-            srcRank = self.request.GET['src'];
-            # Grab the source rank for the operation
-            destRank = self.request.GET['dest'];
-
-            #### Perform the operation (row swap)
-
-            # Ensure the ranks are unique
-            if int(srcRank) != int(destRank):
-                # Find the Vote instances associated with the two ranks involved
-                src = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(srcRank))).get();
-                dest = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(destRank))).get();
-
-                # Now switch their games
-                tmp = src.game;
-                src.game = dest.game;
-                dest.game = tmp;
-
-                # Push the changes back to the db
-                src.put();
-                dest.put();
+            usrName = self.request.GET['username'];
+            usr = User.query(User.name == usrName).get();
         except KeyError:
-            # If no parameters were passed in the URI, don't do any db updates
-            pass
+            pass 
 
-        #### Generate the parameters for the html template (jinja2)
+        if usr is not None:
 
-        # Get all of the votes sorted by rank and then time
-        votes = Vote.query(Vote.user == usr.key).order(Vote.rank, Vote.time).fetch();
+            # TODO: Handle not finding the current user
 
-        # Iterate through the votes adding each to the table's contents
-        table_contents = [];
-        for v in votes:
-            game = v.game.get();
-            table_contents.append([str(v.rank), game.name]);
+            try:
+                #### Pull parameters from the URI
+
+                # Grab the target rank for the operation
+                srcRank = self.request.GET['src'];
+                # Grab the source rank for the operation
+                destRank = self.request.GET['dest'];
+
+                #### Perform the operation (row swap)
+
+                # Ensure the ranks are unique
+                if int(srcRank) != int(destRank):
+                    # Find the Vote instances associated with the two ranks involved
+                    src = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(srcRank))).get();
+                    dest = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(destRank))).get();
+
+                    # Now switch their games
+                    tmp = src.game;
+                    src.game = dest.game;
+                    dest.game = tmp;
+
+                    # Push the changes back to the db
+                    src.put();
+                    dest.put();
+            except KeyError:
+                # If no parameters were passed in the URI, don't do any db updates
+                pass
+
+            #### Generate the parameters for the html template (jinja2)
+
+            # Get all of the votes sorted by rank and then time
+            votes = Vote.query(Vote.user == usr.key).order(Vote.rank, Vote.time).fetch();
+
+            # Iterate through the votes adding each to the table's contents
+            for v in votes:
+                game = v.game.get();
+                table_contents.append([str(v.rank), game.name]);
 
         # Create the template's parameters
-        template_values = {'candidates': table_contents}
+        template_values['username'] = usrName;
+        template_values['draggable'] = 'false';
+        template_values['candidates'] = table_contents;
 
         # Generate the template instance
         template = JINJA_ENVIRONMENT.get_template('table_test.html')

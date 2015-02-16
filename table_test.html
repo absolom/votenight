@@ -7,12 +7,28 @@
 	<link rel="stylesheet" type="text/css" href="/stylesheets/table_test_style.css">
 </head>
 
-<body>
+<body onload="votingEnable()">
 
-<!-- TODO: Convert this to a template and have the backend generate it. -->
+<div id="usernameCont">
+{% if username %}
+	<span class="temp" id="username">{{ username }}</span>
+{% else %}
+	<form method="get">
+		<input class="temp" type="text" placeholder="Enter Username" name="username">
+		<button class="invisible" type="submit" name="applyName" value="applyNameClicked"></button>
+	</form>
+{% endif %}
+</div>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+
 <div id="candidates">
 	{% for item in candidates %}
-		<div class="row" draggable="true">
+		<div class="rowNoDrag" draggable="{{ draggable }}">
 			<span class="rank">{{ item[0] }}</span><span class="name">{{ item[1] }}</span>
 		</div>
 	{% endfor %}
