@@ -12,6 +12,37 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     extensions=['jinja2.ext.autoescape'],
     autoescape=True)
 
+############### Utility Functions ###############
+
+def create_user(name):
+    user = User()
+    user.name = name
+    user.put()
+    return user
+
+def initialize_db():
+    """
+    Populates the DB with some Candidates for testing.
+    """
+    cd1 = Candidate();
+    cd1.name = 'GameA';
+    cd1.put();
+
+    cd2 = Candidate();
+    cd2.name = 'GameB';
+    cd2.put();
+
+    cd3 = Candidate();
+    cd3.name = 'GameC';
+    cd3.put();
+
+    cd3 = Candidate();
+    cd3.name = 'GameD';
+    cd3.put();
+
+#################################################
+
+############### NDB Data Model ###############
 
 class User(ndb.Model):
     name = ndb.StringProperty();
@@ -25,6 +56,8 @@ class Vote(ndb.Model):
     game = ndb.KeyProperty(kind=Candidate);
     time = ndb.DateTimeProperty(auto_now=True);
 
+##############################################
+
 class MainPage(webapp2.RequestHandler):
     def get(self):
         """
@@ -33,6 +66,7 @@ class MainPage(webapp2.RequestHandler):
 
         If the URI contains a 'src' and 'dest' parameter which specify two
         different ranks, the games for those ranks will be swapped.
+        TODO: Split some of this functions body into helper functions
         """
         table_contents = [];
         template_values = {};
@@ -43,13 +77,15 @@ class MainPage(webapp2.RequestHandler):
         try:
             usrName = self.request.GET['username'];
             usr = User.query(User.name == usrName).get();
+
+            # Create a new user if one was specified but doesn't exist in DB
+            if usr is None:
+                usr = create_user(usrName)
+
         except KeyError:
             pass 
 
         if usr is not None:
-
-            # TODO: Handle not finding the current user
-
             try:
                 #### Pull parameters from the URI
 
@@ -84,9 +120,33 @@ class MainPage(webapp2.RequestHandler):
             votes = Vote.query(Vote.user == usr.key).order(Vote.rank, Vote.time).fetch();
 
             # Iterate through the votes adding each to the table's contents
+            lastRank = 0;
             for v in votes:
                 game = v.game.get();
                 table_contents.append([str(v.rank), game.name]);
+                lastRank = v.rank
+
+            # Iterate through all of the candidates and add those that are unvoted for
+            candidates = Candidate.query().fetch();
+            for c in candidates:
+                found = False
+                for v in votes:
+                    if v.game is c.key:
+                        found = True
+                        break
+                if not found:
+                    newRank = lastRank + 1
+
+                    # Create a new database entry
+                    vote = Vote()
+                    vote.rank = newRank
+                    vote.game = c.key
+                    vote.user = usr.key
+                    vote.put()
+
+                    # Add to the template data
+                    table_contents.append([str(newRank), c.name])
+                    lastRank = newRank
 
         # Create the template's parameters
         template_values['username'] = usrName;
@@ -98,57 +158,6 @@ class MainPage(webapp2.RequestHandler):
 
         # Generate and send the html back to the requester
         self.response.write(template.render(template_values))
-
-    def initialize_db(self):
-        """
-        Populates the DB with some test entries:
-            - One user 'DefaultUser'.
-            - Four games and associated four votes.
-        """
-        vote.put();
-        user = User();
-        user.name = 'DefaultUser';
-        user.put();
-
-        cd1 = Candidate();
-        cd1.name = 'GameA';
-        cd1.put();
-
-        cd2 = Candidate();
-        cd2.name = 'GameB';
-        cd2.put();
-
-        cd3 = Candidate();
-        cd3.name = 'GameC';
-        cd3.put();
-
-        cd3 = Candidate();
-        cd3.name = 'GameD';
-        cd3.put();
-
-        vote = Vote();
-        vote.user = user.key;
-        vote.rank = 1;
-        vote.game = cd1.key;
-        vote.put();
-
-        vote = Vote();
-        vote.user = user.key;
-        vote.rank = 2;
-        vote.game = cd2.key;
-        vote.put();
-
-        vote = Vote();
-        vote.user = user.key;
-        vote.rank = 3;
-        vote.game = cd3.key;
-        vote.put();
-
-        vote = Vote();
-        vote.user = usr.key;
-        vote.rank = 4;
-        vote.game = cd4.key;
-        vote.put();
 
 application = webapp2.WSGIApplication([
     ('/', MainPage),
