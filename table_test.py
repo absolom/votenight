@@ -98,6 +98,22 @@ class MainPage(webapp2.RequestHandler):
 
                 # Ensure the ranks are unique
                 if int(srcRank) != int(destRank):
+                    ## To implement insertion:
+                    ## Two case, src > dest or src < dest where increasing numbers are going down the rows
+                    ##   Case 1 (src > dest):
+                    ##      Those above dest are unchanged.
+                    ##      Those at and below dest are incremented by 1
+                    ##      Those below src are unchanged.
+                    ##      Source takes dest's rank
+                    ##   Case 2 (src < dest):
+                    ##      Those above src are unchanged.
+                    ##      Those below src and above dest are decremented by 1.
+                    ##      Those below dest are unchanged.
+                    ##      Source takes dest's -1's rank
+                    
+                    # STOPPED HERE: Implement the above algorithm.  It has already been implemented
+                    #  on the client side.
+ 
                     # Find the Vote instances associated with the two ranks involved
                     src = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(srcRank))).get();
                     dest = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(destRank))).get();

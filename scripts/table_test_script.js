@@ -24,15 +24,25 @@ function handleDrop(e) {
 
 		//// Update the local HTML
 
-		// Copy the destination row's game name to the source row
-		dragSrcEl.getElementsByClassName("name")[0].innerHTML = 
-			this.getElementsByClassName("name")[0].innerHTML;
+		table = document.getElementById('candidates');
 
-		// Replace the destination row's game name with the one stored in the xfer data
-		this.getElementsByClassName("name")[0].innerHTML = 
-			e.dataTransfer.getData('text/html');
-
-		// TODO: Change the drop behavior from swapping to inserting
+		if(srcRow > targRow) {  // Target is above the source on the screen
+			// Move all those at or below target down one
+			for(var i = srcRow; i > targRow; i--) {
+				document.getElementsByClassName("name")[i-1].innerHTML = 
+					document.getElementsByClassName("name")[i-2].innerHTML;
+			}
+			document.getElementsByClassName("name")[targRow-1].innerHTML = 
+				e.dataTransfer.getData('text/html');
+		}
+		else {  // Target is below the source on the screen
+			for(var i = srcRow; i < targRow; i++) {
+				document.getElementsByClassName("name")[i-1].innerHTML =
+					document.getElementsByClassName("name")[i].innerHTML;
+			}
+			document.getElementsByClassName("name")[targRow-1].innerHTML =
+				e.dataTransfer.getData('text/html');
+		}
 
 		//// Tell the server of the change
 		var name = document.getElementById("username").innerHTML;
