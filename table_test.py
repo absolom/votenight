@@ -7,6 +7,8 @@ from google.appengine.ext import ndb
 import webapp2
 import jinja2
 
+logging.getLogger().setLevel(logging.DEBUG)
+
 JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
     extensions=['jinja2.ext.autoescape'],
@@ -110,22 +112,20 @@ class MainPage(webapp2.RequestHandler):
                     ##      Those below src and above dest are decremented by 1.
                     ##      Those below dest are unchanged.
                     ##      Source takes dest's -1's rank
-                    
-                    # STOPPED HERE: Implement the above algorithm.  It has already been implemented
-                    #  on the client side.
- 
-                    # Find the Vote instances associated with the two ranks involved
-                    src = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(srcRank))).get();
-                    dest = Vote.query(ndb.AND(Vote.user == usr.key, Vote.rank == int(destRank))).get();
+                    votes = Vote.query(Vote.user == usr.key).order(Vote.rank).fetch();
+                    movingGameKey = votes[int(srcRank)-1].game;
 
-                    # Now switch their games
-                    tmp = src.game;
-                    src.game = dest.game;
-                    dest.game = tmp;
+                    if int(srcRank) > int(destRank):
+                        for i in range(int(srcRank), int(destRank), -1):
+                            votes[i-1].game = votes[i-2].game
+                        votes[int(destRank)-1].game = movingGameKey
+                    else:
+                        for i in range(srcRank, destRank):
+                            votes[i-1].game = votes[i].game
+                        votes[int(destRank)-1].game = movingGameKey
 
-                    # Push the changes back to the db
-                    src.put();
-                    dest.put();
+                    # TODO: Figure out the subset that has to be put'ed
+                    ndb.put_multi(votes)
             except KeyError:
                 # If no parameters were passed in the URI, don't do any db updates
                 pass
