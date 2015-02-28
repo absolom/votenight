@@ -3,11 +3,34 @@
   border: none !important;
   font-size: 0;  
 }
-.temp {
+.labelUser {
+  font-size: 60%;
+  color: #999;
+  position: relative;
+  left: 202px;
+}
+.labelRank {
+  position: relative;
+  left: 15px;
+  font-size: 60%;
+  color: #999;
+}
+.labelGame {
+  position: relative;
+  left: 50px;
+  font-size: 60%;
+  color: #999;
+}
+.userName {
   font-size: 150%;
   text-align: center;
   position: absolute;
-  left: 90px;
+  left: 80px;
+  width: 300px;
+  border: 2px solid #aaaaaa;
+  border-radius: 10px;
+  height: 50px;
+  line-height: 50px;
 }
 .testbutton {
   padding-top: 0px;
@@ -22,43 +45,38 @@
   color: #666;
   position: relative;
   left: 20px;
-  top: 20px;
+  top: 8px;
+  font-size: 100%;
 }
 .name {
 	color: #000;
 	position: relative;
-	left: 200px;
-	top: 20px;
+	left: 50px;
+	top: 10px;
+  font-size: 120%;
 }
 .row {
-  height: 60px;
+  height: 40px;
   width: 450px;
-  border: 2px solid #666666;
-  background-color: #ccc;
-  margin-right: 5px;
+  border: 2px solid #aaaaaa;
+  margin-top: 2px;
   -webkit-border-radius: 10px;
   -ms-border-radius: 10px;
   -moz-border-radius: 10px;
   border-radius: 10px;
-  -webkit-box-shadow: inset 0 0 3px #000;
-  -ms-box-shadow: inset 0 0 3px #000;
-  box-shadow: inset 0 0 3px #000;
   text-align: left;
   cursor: move;
 }
 .rowNoDrag {
-  height: 60px;
+  height: 40px;
   width: 450px;
-  border: 2px solid #666666;
-  background-color: #ccc;
-  margin-right: 5px;
+  border: 2px solid #aaaaaa;
+  background-color: #aaaaaa;
+  margin-top: 2px;
   -webkit-border-radius: 10px;
   -ms-border-radius: 10px;
   -moz-border-radius: 10px;
   border-radius: 10px;
-  -webkit-box-shadow: inset 0 0 3px #000;
-  -ms-box-shadow: inset 0 0 3px #000;
-  box-shadow: inset 0 0 3px #000;
   text-align: left;
 }
 /* Prevent the text contents of draggable elements from being selectable. */

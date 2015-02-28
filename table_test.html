@@ -10,11 +10,12 @@
 <body onload="votingEnable()">
 
 <div id="usernameCont">
+<div><span class="labelUser">Username</span></div>
 {% if username %}
-	<span class="temp" id="username">{{ username }}</span>
+	<span class="userName" id="username">{{ username }}</span>
 {% else %}
 	<form method="get">
-		<input class="temp" type="text" placeholder="Enter Username" name="username">
+		<input class="userName" type="text" placeholder="Enter Username" name="username">
 		<button class="invisible" type="submit" name="applyName" value="applyNameClicked"></button>
 	</form>
 {% endif %}
@@ -27,6 +28,7 @@
 <br>
 
 <div id="candidates">
+	<span class="labelRank">Rank</span><span class="labelGame">Game</span>
 	{% for item in candidates %}
 		<div class="rowNoDrag" draggable="{{ draggable }}">
 			<span class="rank">{{ item[0] }}</span><span class="name">{{ item[1] }}</span>
