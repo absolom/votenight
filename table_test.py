@@ -120,7 +120,7 @@ class MainPage(webapp2.RequestHandler):
                             votes[i-1].game = votes[i-2].game
                         votes[int(destRank)-1].game = movingGameKey
                     else:
-                        for i in range(srcRank, destRank):
+                        for i in range(int(srcRank), int(destRank)):
                             votes[i-1].game = votes[i].game
                         votes[int(destRank)-1].game = movingGameKey
 
