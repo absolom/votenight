@@ -14,7 +14,10 @@ handlers:
 - url: /.*
   script: table_test.application
 - url: /tasks/tally
-  script: tally.application
+  script: table_test.application
+  # login: admin
+- url: /tasks/initdb
+  script: table_test.application
   # login: admin
 
 libraries:

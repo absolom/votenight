@@ -1,6 +1,7 @@
 import os
 import urllib
 import logging
+import datetime
 
 from google.appengine.ext import ndb
 
@@ -26,29 +27,35 @@ def initialize_db():
     """
     Populates the DB with some Candidates for testing.
     """
-    cd = Candidate();
-    cd.name = 'Team Fortress 2';
-    cd.put();
+    cd = Candidate()
+    cd.name = 'Team Fortress 2'
+    cd.put()
 
-    cd = Candidate();
-    cd.name = 'Hammerwatch';
-    cd.put();
+    cd = Candidate()
+    cd.name = 'Hammerwatch'
+    cd.put()
 
-    cd = Candidate();
-    cd.name = 'League of Legends';
-    cd.put();
+    cd = Candidate()
+    cd.name = 'League of Legends'
+    cd.put()
 
-    cd = Candidate();
-    cd.name = 'Planetside 2';
-    cd.put();
+    cd = Candidate()
+    cd.name = 'Planetside 2'
+    cd.put()
 
-    cd = Candidate();
-    cd.name = 'Diablo 3';
-    cd.put();
+    cd = Candidate()
+    cd.name = 'Diablo 3'
+    cd.put()
 
-    cd = Candidate();
-    cd.name = 'Guild Wars 2';
-    cd.put();
+    cd = Candidate()
+    cd.name = 'Guild Wars 2'
+    cd.put()
+
+    vp = VotingPeriod()
+    vp.createdDate = datetime.date.today()
+    vp.endDate = datetime.date.today() + datetime.timedelta(weeks=1)
+    vp.index = 0
+    vp.put()
 #################################################
 
 ############### NDB Data Model ###############
@@ -67,7 +74,8 @@ class Vote(ndb.Model):
 
 class VotingPeriod(ndb.Model):
     index = ndb.IntegerProperty()
-    endDate = ndb.DateProperty(auto_now_add=True)
+    createdDate = ndb.DateProperty()
+    endDate = ndb.DateProperty()
     first = ndb.KeyProperty(kind=Candidate)
     second = ndb.KeyProperty(kind=Candidate)
     third = ndb.KeyProperty(kind=Candidate)
@@ -113,11 +121,25 @@ class Tally(webapp2.RequestHandler):
         vp.second = cd2.key
         vp.third = cd3.key
 
+        # Figure out the dates
+        today = date.today()
+        vp.createdDate = today
+        vp.endDate = today + datetime.timedelta(weeks = 1)
+
         ndb.put_multi([vp, cd1, cd2, cd3])
 
 ##############################################
 
+class DbAdmin(webapp2.RequestHandler):
+    def get(self):
+        initialize_db()
+
+##############################################
+
 class MainPage(webapp2.RequestHandler):
+    def initDb(self):
+        initialize_db()
+
     def get(self):
         """
         Generates the html for the webpage dynamically from the contents
@@ -223,7 +245,26 @@ class MainPage(webapp2.RequestHandler):
             # Push all the new votes to the db
             ndb.put_multi(addedVotes)
 
-        # Create the template's parameters
+        ## Build the voting results portion of the page
+        # Get the current voting period
+        currPeriod = VotingPeriod.query().order(VotingPeriod.index).get()
+
+        # Calculate the difference between now and when the period ends
+        endDatetime = datetime.datetime.combine(currPeriod.endDate, datetime.time(hour=0, minute=0, second=0, microsecond=0))
+        curDatetime = datetime.datetime.now()
+        timedelta = endDatetime - datetime.datetime.now() 
+
+        # Convert that difference to days, hours, minutes
+        days = timedelta.days
+        hours = timedelta.seconds / 60 / 60
+        minutes = (timedelta.seconds - (hours*60*60)) / 60
+
+        # Fill in the template with the time information
+        template_values['days'] = days
+        template_values['hours'] = hours
+        template_values['minutes'] = minutes
+
+        ## Fill out the rest of the template
         template_values['username'] = usrName
         template_values['draggable'] = 'false'
         template_values['candidates'] = table_contents
@@ -237,6 +278,7 @@ class MainPage(webapp2.RequestHandler):
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/table_test.html', MainPage),
+    ('/tasks/initdb', DbAdmin),
     ('/tasks/tally', Tally),
     ('/tasks/tally/tally.html', Tally),
 ], debug=True)
