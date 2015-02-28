@@ -14,6 +14,14 @@ function validateUsername() {
 		alert("Username must be longer than 2 characters...");
 		return false;
 	}
+	for (var i = 0; i < x.length; i++)
+	{
+		if(x[i] == ' ')
+		{
+			alert("Username must not have spaces...");
+			return false;
+		}
+	}
 }
 
 function handleDrop(e) {

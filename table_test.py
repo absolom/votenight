@@ -208,16 +208,26 @@ class MainPage(webapp2.RequestHandler):
                     ##      Those below src and above dest are decremented by 1.
                     ##      Those below dest are unchanged.
                     ##      Source takes dest's -1's rank
+                    logging.info("Doing insertion: " + srcRank + "->" + destRank)
+
                     votes = Vote.query(Vote.user == usr.key).order(Vote.rank).fetch()
                     movingGameKey = votes[int(srcRank)-1].game
 
                     if int(srcRank) > int(destRank):
                         for i in range(int(srcRank), int(destRank), -1):
+                            g = votes[i-2].game.get()
+                            logging.info("Moving \"" + g.name + "\" to rank " + str(i))
                             votes[i-1].game = votes[i-2].game
+                        g = movingGameKey.get()
+                        logging.info("Moving \"" + g.name + "\" to rank " + str(destRank))
                         votes[int(destRank)-1].game = movingGameKey
                     else:
                         for i in range(int(srcRank), int(destRank)):
+                            g = votes[i].game.get()
+                            logging.info("Moving \"" + g.name + "\" to rank " + str(i))
                             votes[i-1].game = votes[i].game
+                        g = movingGameKey.get()
+                        logging.info("Moving \"" + g.name + "\" to rank " + str(destRank))
                         votes[int(destRank)-1].game = movingGameKey
 
                     ndb.put_multi(votes)
@@ -255,6 +265,8 @@ class MainPage(webapp2.RequestHandler):
                     vote.game = c.key
                     vote.user = usr.key
                     addedVotes.append(vote)
+
+                    logging.info("Adding a new vote for \"" + vote.game.get().name + "\" to " + usr.name)
 
                     # Add to the template data
                     table_contents.append([str(newRank), c.name])
