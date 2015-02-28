@@ -124,7 +124,6 @@ class MainPage(webapp2.RequestHandler):
                             votes[i-1].game = votes[i].game
                         votes[int(destRank)-1].game = movingGameKey
 
-                    # TODO: Figure out the subset that has to be put'ed
                     ndb.put_multi(votes)
             except KeyError:
                 # If no parameters were passed in the URI, don't do any db updates
@@ -144,25 +143,28 @@ class MainPage(webapp2.RequestHandler):
 
             # Iterate through all of the candidates and add those that are unvoted for
             candidates = Candidate.query().fetch();
+            addedVotes = []
             for c in candidates:
                 found = False
                 for v in votes:
-                    if v.game is c.key:
+                    if v.game == c.key:
                         found = True
                         break
                 if not found:
                     newRank = lastRank + 1
 
                     # Create a new database entry
-                    vote = Vote()
+                    vote = Vote(parent=usr.key)
                     vote.rank = newRank
                     vote.game = c.key
                     vote.user = usr.key
-                    vote.put()
+                    addedVotes.append(vote)
 
                     # Add to the template data
                     table_contents.append([str(newRank), c.name])
                     lastRank = newRank
+            # Push all the new votes to the db
+            ndb.put_multi(addedVotes)
 
         # Create the template's parameters
         template_values['username'] = usrName;
