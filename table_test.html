@@ -14,8 +14,8 @@
 {% if username %}
 	<span class="userName" id="username">{{ username }}</span>
 {% else %}
-	<form method="get">
-		<input class="userName" type="text" placeholder="Enter Username" name="username">
+	<form name="loginForm" method="get" onsubmit="return validateUsername()">
+		<input class="userName" type="text" placeholder="Enter Username" name="username" required>
 		<button class="invisible" type="submit" name="applyName" value="applyNameClicked"></button>
 	</form>
 {% endif %}

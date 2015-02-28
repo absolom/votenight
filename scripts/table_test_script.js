@@ -8,6 +8,14 @@ function handleDragStart(e) {
 	e.dataTransfer.setData('text/html', this.getElementsByClassName("name")[0].innerHTML);
 }
 
+function validateUsername() {
+	var x = document.forms["loginForm"]["username"].value;
+	if (x == null || x == "" || x.length < 3) {
+		alert("Username must be longer than 2 characters...");
+		return false;
+	}
+}
+
 function handleDrop(e) {
 	if (e.stopPropagation) {
 		e.stopPropagation();
