@@ -294,6 +294,12 @@ class MainPage(webapp2.RequestHandler):
             template_values['hours'] = hours
             template_values['minutes'] = minutes
 
+        # Retrieve winners from the last voting period
+        winners = Winner.query(ancestor=lastPeriod.key).fetch()
+
+        for i in range(0, len(winners)):
+            template_values['winner' + str(i+1)] = winners[i].name
+
         ## Fill out the rest of the template
         template_values['username'] = usrName
         template_values['draggable'] = 'false'

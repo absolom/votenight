@@ -1,3 +1,19 @@
+.winnerLabel {
+  position: absolute;
+  text-align: center;
+  width: 400px;
+  font-size: 120%;
+  left: 35px;
+  color: #000;
+}
+.winnerMsg {
+  position: absolute;
+  text-align: left;
+  width: 400px;
+  font-size: 120%;
+  color: #000;
+  left: 190px;
+}
 .invisible {
   background: transparent;
   border: none !important;

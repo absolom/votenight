@@ -47,6 +47,37 @@
 </div>
 {% endif %}
 
+<br>
+<br>
+
+{% if winner1 %}
+<div>
+<span class="winnerLabel">Previous Winners</span>
+</div>
+<br>
+
+{% if winner1 %}
+<div class="winnerMsg" id="winner1">
+<span class="winner1">1. {{ winner1 }}</span>
+</div>
+<br>
+{% endif %}
+
+{% if winner2 %}
+<div class="winnerMsg" id="winner2">
+<span class="winner2">2. {{ winner2 }}</span>
+</div>
+<br>
+{% endif %}
+
+{% if winner3 %}
+<div class="winnerMsg" id="winner3">
+<span class="winner3">3. {{ winner3 }}</span>
+</div>
+{% endif %}
+
+{% endif %}
+
 <script src="/scripts/table_test_script.js"></script>
 <link rel="stylesheet" type="text/css" href="/stylesheets/table_test_style.css">
 
