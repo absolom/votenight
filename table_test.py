@@ -52,8 +52,8 @@ def initialize_db():
     cd.put()
 
     vp = VotingPeriod()
-    vp.createdDate = datetime.date.today()
-    vp.endDate = datetime.date.today() + datetime.timedelta(weeks=1)
+    vp.createdDate = datetime.date(month=2, day=26, year=2015)
+    vp.endDate = datetime.date(month=2, day=27, year=2015)
     vp.index = 0
     vp.put()
 #################################################
@@ -61,6 +61,9 @@ def initialize_db():
 ############### NDB Data Model ###############
 
 class User(ndb.Model):
+    name = ndb.StringProperty()
+
+class Winner(ndb.Model):
     name = ndb.StringProperty()
 
 class Candidate(ndb.Model):
@@ -76,9 +79,6 @@ class VotingPeriod(ndb.Model):
     index = ndb.IntegerProperty()
     createdDate = ndb.DateProperty()
     endDate = ndb.DateProperty()
-    first = ndb.KeyProperty(kind=Candidate)
-    second = ndb.KeyProperty(kind=Candidate)
-    third = ndb.KeyProperty(kind=Candidate)
 
 ##############################################
 
@@ -87,9 +87,18 @@ def TallyVotes():
     Tallys the current votes.
     Returns a 3-tuple of the top 3 voted games.
     """
-    first = Candidate.query(Candidate.name == "Guild Wars 2").get()
-    second = Candidate.query(Candidate.name == "Hammerwatch").get()
-    third = Candidate.query(Candidate.name == "Team Fortress 2").get()
+    logging.info("TallyVotes() called...")
+    cds = Candidate.query().fetch()
+    first = None
+    second = None
+    third = None
+    for c in cds:
+        if c.name == "Guild Wars 2":
+            first = c
+        elif c.name == "Hammerwatch":
+            second = c
+        elif c.name == "Team Fortress 2":
+            third = c
 
     return (first, second, third)
 
@@ -99,34 +108,42 @@ class Tally(webapp2.RequestHandler):
         This get will end the voting period, tally votes, and update the database.
         This get is intended to be called by a CRON job at a regular interval.
         """
+        logging.info("Tally was called!")
+
         ## Invoke the voting tally function to return the top three games
         (first, second, third) = TallyVotes()
 
+        # Get the last period so we know the next index
+        lastPeriod = VotingPeriod.query().order(-VotingPeriod.index).get()
+
         # Create the voting period results db item
         vp = VotingPeriod()
-        vp.index = 0
-
-        # Create copies of the winning candidates
-        cd1 = Candidate(parent=vp.key)
-        cd1.name = first.name
-
-        cd2 = Candidate(parent=vp.key)
-        cd2.name = second.name
-
-        cd3 = Candidate(parent=vp.key)
-        cd3.name = third.name
-
-        # Add the copies of the winning candidates to the VotingPeriod
-        vp.first = cd1.key
-        vp.second = cd2.key
-        vp.third = cd3.key
+        vp.index = lastPeriod.index + 1
 
         # Figure out the dates
-        today = date.today()
-        vp.createdDate = today
-        vp.endDate = today + datetime.timedelta(weeks = 1)
+        today = datetime.date.today()
+        vp.createdDate = today - datetime.timedelta(weeks=1)
+        vp.endDate = today
 
-        ndb.put_multi([vp, cd1, cd2, cd3])
+        # Push the voting period to the DB
+        vp.put()
+
+        # Create copies of the winning candidates
+        cd1 = Winner(parent=vp.key)
+        cd1.name = first.name
+        cd1.rank = 1
+
+        cd2 = Winner(parent=vp.key)
+        cd2.name = second.name
+        cd2.rank = 2
+
+        cd3 = Winner(parent=vp.key)
+        cd3.name = third.name
+        cd3.rank = 3
+
+        # Push the winner instances to the DB
+        keys = ndb.put_multi([cd1, cd2, cd3])
+
 
 ##############################################
 
@@ -246,11 +263,12 @@ class MainPage(webapp2.RequestHandler):
             ndb.put_multi(addedVotes)
 
         ## Build the voting results portion of the page
-        # Get the current voting period
-        currPeriod = VotingPeriod.query().order(VotingPeriod.index).get()
-        if currPeriod is not None:
+        # Get the last voting period
+        lastPeriod = VotingPeriod.query().order(-VotingPeriod.index).get()
+        if lastPeriod is not None:
             # Calculate the difference between now and when the period ends
-            endDatetime = datetime.datetime.combine(currPeriod.endDate, datetime.time(hour=0, minute=0, second=0, microsecond=0))
+            endDate= lastPeriod.endDate + datetime.timedelta(weeks=1)
+            endDatetime = datetime.datetime.combine(endDate, datetime.time(hour=0, minute=0, second=0, microsecond=0))
             curDatetime = datetime.datetime.now()
             timedelta = endDatetime - datetime.datetime.now() 
 
