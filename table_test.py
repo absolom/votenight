@@ -248,21 +248,21 @@ class MainPage(webapp2.RequestHandler):
         ## Build the voting results portion of the page
         # Get the current voting period
         currPeriod = VotingPeriod.query().order(VotingPeriod.index).get()
+        if currPeriod is not None:
+            # Calculate the difference between now and when the period ends
+            endDatetime = datetime.datetime.combine(currPeriod.endDate, datetime.time(hour=0, minute=0, second=0, microsecond=0))
+            curDatetime = datetime.datetime.now()
+            timedelta = endDatetime - datetime.datetime.now() 
 
-        # Calculate the difference between now and when the period ends
-        endDatetime = datetime.datetime.combine(currPeriod.endDate, datetime.time(hour=0, minute=0, second=0, microsecond=0))
-        curDatetime = datetime.datetime.now()
-        timedelta = endDatetime - datetime.datetime.now() 
+            # Convert that difference to days, hours, minutes
+            days = timedelta.days
+            hours = timedelta.seconds / 60 / 60
+            minutes = (timedelta.seconds - (hours*60*60)) / 60
 
-        # Convert that difference to days, hours, minutes
-        days = timedelta.days
-        hours = timedelta.seconds / 60 / 60
-        minutes = (timedelta.seconds - (hours*60*60)) / 60
-
-        # Fill in the template with the time information
-        template_values['days'] = days
-        template_values['hours'] = hours
-        template_values['minutes'] = minutes
+            # Fill in the template with the time information
+            template_values['days'] = days
+            template_values['hours'] = hours
+            template_values['minutes'] = minutes
 
         ## Fill out the rest of the template
         template_values['username'] = usrName
