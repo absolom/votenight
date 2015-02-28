@@ -26,22 +26,29 @@ def initialize_db():
     """
     Populates the DB with some Candidates for testing.
     """
-    cd1 = Candidate();
-    cd1.name = 'GameA';
-    cd1.put();
+    cd = Candidate();
+    cd.name = 'Team Fortress 2';
+    cd.put();
 
-    cd2 = Candidate();
-    cd2.name = 'GameB';
-    cd2.put();
+    cd = Candidate();
+    cd.name = 'Hammerwatch';
+    cd.put();
 
-    cd3 = Candidate();
-    cd3.name = 'GameC';
-    cd3.put();
+    cd = Candidate();
+    cd.name = 'League of Legends';
+    cd.put();
 
-    cd3 = Candidate();
-    cd3.name = 'GameD';
-    cd3.put();
+    cd = Candidate();
+    cd.name = 'Planetside 2';
+    cd.put();
 
+    cd = Candidate();
+    cd.name = 'Diablo 3';
+    cd.put();
+
+    cd = Candidate();
+    cd.name = 'Guild Wars 2';
+    cd.put();
 #################################################
 
 ############### NDB Data Model ###############
@@ -176,7 +183,7 @@ class MainPage(webapp2.RequestHandler):
 
         # Generate and send the html back to the requester
         self.response.write(template.render(template_values))
-
+        
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/table_test.html', MainPage),
