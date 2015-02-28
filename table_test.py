@@ -238,7 +238,7 @@ class MainPage(webapp2.RequestHandler):
             #### Generate the parameters for the html template (jinja2)
 
             # Get all of the votes sorted by rank and then time
-            votes = Vote.query(Vote.user == usr.key).order(Vote.rank, Vote.time).fetch()
+            votes = Vote.query(ancestor=usr.key).order(Vote.rank, Vote.time).fetch()
 
             # Iterate through the votes adding each to the table's contents
             lastRank = 0
@@ -294,11 +294,11 @@ class MainPage(webapp2.RequestHandler):
             template_values['hours'] = hours
             template_values['minutes'] = minutes
 
-        # Retrieve winners from the last voting period
-        winners = Winner.query(ancestor=lastPeriod.key).fetch()
+            # Retrieve winners from the last voting period
+            winners = Winner.query(ancestor=lastPeriod.key).fetch()
 
-        for i in range(0, len(winners)):
-            template_values['winner' + str(i+1)] = winners[i].name
+            for i in range(0, len(winners)):
+                template_values['winner' + str(i+1)] = winners[i].name
 
         ## Fill out the rest of the template
         template_values['username'] = usrName
