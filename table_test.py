@@ -54,16 +54,66 @@ def initialize_db():
 ############### NDB Data Model ###############
 
 class User(ndb.Model):
-    name = ndb.StringProperty();
+    name = ndb.StringProperty()
 
 class Candidate(ndb.Model):
-    name = ndb.StringProperty();
+    name = ndb.StringProperty()
 
 class Vote(ndb.Model):
-    user = ndb.KeyProperty(kind=User);
-    rank = ndb.IntegerProperty();
-    game = ndb.KeyProperty(kind=Candidate);
-    time = ndb.DateTimeProperty(auto_now=True);
+    user = ndb.KeyProperty(kind=User)
+    rank = ndb.IntegerProperty()
+    game = ndb.KeyProperty(kind=Candidate)
+    time = ndb.DateTimeProperty(auto_now=True)
+
+class VotingPeriod(ndb.Model):
+    index = ndb.IntegerProperty()
+    endDate = ndb.DateProperty(auto_now_add=True)
+    first = ndb.KeyProperty(kind=Candidate)
+    second = ndb.KeyProperty(kind=Candidate)
+    third = ndb.KeyProperty(kind=Candidate)
+
+##############################################
+
+def TallyVotes():
+    """
+    Tallys the current votes.
+    Returns a 3-tuple of the top 3 voted games.
+    """
+    first = Candidate.query(Candidate.name == "Guild Wars 2").get()
+    second = Candidate.query(Candidate.name == "Hammerwatch").get()
+    third = Candidate.query(Candidate.name == "Team Fortress 2").get()
+
+    return (first, second, third)
+
+class Tally(webapp2.RequestHandler):
+    def get(self):
+        """
+        This get will end the voting period, tally votes, and update the database.
+        This get is intended to be called by a CRON job at a regular interval.
+        """
+        ## Invoke the voting tally function to return the top three games
+        (first, second, third) = TallyVotes()
+
+        # Create the voting period results db item
+        vp = VotingPeriod()
+        vp.index = 0
+
+        # Create copies of the winning candidates
+        cd1 = Candidate(parent=vp.key)
+        cd1.name = first.name
+
+        cd2 = Candidate(parent=vp.key)
+        cd2.name = second.name
+
+        cd3 = Candidate(parent=vp.key)
+        cd3.name = third.name
+
+        # Add the copies of the winning candidates to the VotingPeriod
+        vp.first = cd1.key
+        vp.second = cd2.key
+        vp.third = cd3.key
+
+        ndb.put_multi([vp, cd1, cd2, cd3])
 
 ##############################################
 
@@ -77,15 +127,15 @@ class MainPage(webapp2.RequestHandler):
         different ranks, the games for those ranks will be swapped.
         TODO: Split some of this functions body into helper functions
         """
-        table_contents = [];
-        template_values = {};
+        table_contents = []
+        template_values = {}
 
         #### Get the User instance for the current user
-        usrName = '';
-        usr = None;
+        usrName = ''
+        usr = None
         try:
-            usrName = self.request.GET['username'];
-            usr = User.query(User.name == usrName).get();
+            usrName = self.request.GET['username']
+            usr = User.query(User.name == usrName).get()
 
             # Create a new user if one was specified but doesn't exist in DB
             if usr is None:
@@ -99,9 +149,9 @@ class MainPage(webapp2.RequestHandler):
                 #### Pull parameters from the URI
 
                 # Grab the target rank for the operation
-                srcRank = self.request.GET['src'];
+                srcRank = self.request.GET['src']
                 # Grab the source rank for the operation
-                destRank = self.request.GET['dest'];
+                destRank = self.request.GET['dest']
 
                 #### Perform the operation (row swap)
 
@@ -119,8 +169,8 @@ class MainPage(webapp2.RequestHandler):
                     ##      Those below src and above dest are decremented by 1.
                     ##      Those below dest are unchanged.
                     ##      Source takes dest's -1's rank
-                    votes = Vote.query(Vote.user == usr.key).order(Vote.rank).fetch();
-                    movingGameKey = votes[int(srcRank)-1].game;
+                    votes = Vote.query(Vote.user == usr.key).order(Vote.rank).fetch()
+                    movingGameKey = votes[int(srcRank)-1].game
 
                     if int(srcRank) > int(destRank):
                         for i in range(int(srcRank), int(destRank), -1):
@@ -139,17 +189,17 @@ class MainPage(webapp2.RequestHandler):
             #### Generate the parameters for the html template (jinja2)
 
             # Get all of the votes sorted by rank and then time
-            votes = Vote.query(Vote.user == usr.key).order(Vote.rank, Vote.time).fetch();
+            votes = Vote.query(Vote.user == usr.key).order(Vote.rank, Vote.time).fetch()
 
             # Iterate through the votes adding each to the table's contents
-            lastRank = 0;
+            lastRank = 0
             for v in votes:
-                game = v.game.get();
-                table_contents.append([str(v.rank), game.name]);
+                game = v.game.get()
+                table_contents.append([str(v.rank), game.name])
                 lastRank = v.rank
 
             # Iterate through all of the candidates and add those that are unvoted for
-            candidates = Candidate.query().fetch();
+            candidates = Candidate.query().fetch()
             addedVotes = []
             for c in candidates:
                 found = False
@@ -174,9 +224,9 @@ class MainPage(webapp2.RequestHandler):
             ndb.put_multi(addedVotes)
 
         # Create the template's parameters
-        template_values['username'] = usrName;
-        template_values['draggable'] = 'false';
-        template_values['candidates'] = table_contents;
+        template_values['username'] = usrName
+        template_values['draggable'] = 'false'
+        template_values['candidates'] = table_contents
 
         # Generate the template instance
         template = JINJA_ENVIRONMENT.get_template('table_test.html')
@@ -187,4 +237,6 @@ class MainPage(webapp2.RequestHandler):
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/table_test.html', MainPage),
+    ('/tasks/tally', Tally),
+    ('/tasks/tally/tally.html', Tally),
 ], debug=True)

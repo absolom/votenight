@@ -1,0 +1,4 @@
+cron:
+- description: tally voting period job
+url: /tasks/tally
+schedule: every Thursday 00:00

@@ -13,6 +13,9 @@ handlers:
   script: table_test.application
 - url: /.*
   script: table_test.application
+- url: /tasks/tally
+  script: tally.application
+  # login: admin
 
 libraries:
 - name: webapp2
