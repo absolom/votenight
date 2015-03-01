@@ -55,7 +55,6 @@ def initialize_db():
     cd.put()
 
     vp = VotingPeriod()
-    vp.createdDate = datetime.date(month=2, day=26, year=2015)
     vp.endDate = datetime.date(month=2, day=27, year=2015)
     vp.index = 0
     vp.put()
@@ -83,7 +82,6 @@ class Vote(ndb.Model):
 
 class VotingPeriod(ndb.Model):
     index = ndb.IntegerProperty()
-    createdDate = ndb.DateProperty()
     endDate = ndb.DateProperty()
 
 ##############################################
@@ -128,7 +126,6 @@ class Tally(webapp2.RequestHandler):
 
         # Figure out the dates
         today = datetime.date.today()
-        vp.createdDate = today - datetime.timedelta(weeks=1)
         vp.endDate = today
 
         # Push the voting period to the DB
