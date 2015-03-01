@@ -2,6 +2,7 @@ import os
 import urllib
 import logging
 import datetime
+import time
 
 from google.appengine.ext import ndb
 
@@ -215,7 +216,7 @@ class MainPage(webapp2.RequestHandler):
             ret.name = usernameStr
             ret.put()
 
-        return ret
+        return ret.key.get()
 
     def __addGame(self, gamenameStr):
         """
@@ -450,6 +451,14 @@ class MainPage(webapp2.RequestHandler):
                 # If there was not a username, src, and dest specified in the URI, then don't
                 # do any rank changes
                 pass
+
+        # TODO: Why is the below work around needed? (The last vote query was an ancestor query
+        #       and thus these results should NOT be stale, yet they are sometimes)
+        # If we just created a new user, wait until the DB shows all of the new Votes
+        if votes is not None:
+            while len(votes) is 0:
+                time.sleep(0.1)
+                votes = Vote.query(ancestor=currUserEntity.key).order(Vote.rank, Vote.time).fetch()
 
         self.__generateAndSendWebpage(userNameStr, votes)
 
