@@ -333,14 +333,14 @@ class MainPage(webapp2.RequestHandler):
         template_values['candidates'] = table_contents
 
         # Generate the template instance
-        template = JINJA_ENVIRONMENT.get_template('table_test.html')
+        template = JINJA_ENVIRONMENT.get_template('votenight.html')
 
         # Generate and send the html back to the requester
         self.response.write(template.render(template_values))
         
 application = webapp2.WSGIApplication([
     ('/', MainPage),
-    ('/table_test.html', MainPage),
+    ('/votenight.html', MainPage),
     ('/tasks/initdb', DbAdmin),
     ('/tasks/tally', Tally),
     ('/tasks/tally/tally.html', Tally),

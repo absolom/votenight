@@ -81,7 +81,7 @@ function gameNameKeyPress(e) {
 
 		// Create and send the request
 		req = new XMLHttpRequest();
-		req.open("GET", "table_test.html?gamename=" + gamename, true);
+		req.open("GET", "votenight.html?gamename=" + gamename, true);
 		req.send();
 
 		//// Also add the game to the local HTML
@@ -183,7 +183,7 @@ function handleDrop(e) {
 		var name = document.getElementById("username").innerHTML;
 
 		req = new XMLHttpRequest();
-		req.open("GET", "table_test.html?username=" + name + "&src=" + srcRow + "&dest=" + targRow, true);
+		req.open("GET", "votenight.html?username=" + name + "&src=" + srcRow + "&dest=" + targRow, true);
 		req.send();
 	}
 
