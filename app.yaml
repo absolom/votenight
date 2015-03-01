@@ -16,7 +16,7 @@ handlers:
 - url: /tasks/tally
   script: votenight.application
   # login: admin
-- url: /tasks/initdb
+- url: /tasks/dbadmin
   script: votenight.application
   # login: admin
 

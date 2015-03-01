@@ -335,10 +335,13 @@ class MainPage(webapp2.RequestHandler):
         # Generate and send the html back to the requester
         self.response.write(template.render(template_values))
         
+##############################################
+##############################################
+
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/votenight.html', MainPage),
-    ('/tasks/initdb', DbAdmin),
+    ('/tasks/dbadmin', DbAdmin),
     ('/tasks/tally', Tally),
     ('/tasks/tally/tally.html', Tally),
 ], debug=True)
