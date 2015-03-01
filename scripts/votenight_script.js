@@ -51,6 +51,7 @@ function onLoad() {
 
 	// Check if the user has a username stored on their computer.
 	var username = localStorage.getItem("username");
+	username = null
 	if(username != null) {
 		var form = document.forms["loginForm"];
 		if(form != null) {
@@ -153,7 +154,7 @@ function handleDrop(e) {
 
 		// Store the rank of the row on which the drop occurred
 		targRow = this.getElementsByClassName("rank")[0].innerHTML;
-		
+
 		// Store the rank of the row which is being dragged
 		srcRow = dragSrcEl.getElementsByClassName("rank")[0].innerHTML;
 
@@ -164,10 +165,10 @@ function handleDrop(e) {
 		if(srcRow > targRow) {  // Target is above the source on the screen
 			// Move all those at or below target down one
 			for(var i = srcRow; i > targRow; i--) {
-				document.getElementsByClassName("name")[i-1].innerHTML = 
+				document.getElementsByClassName("name")[i-1].innerHTML =
 					document.getElementsByClassName("name")[i-2].innerHTML;
 			}
-			document.getElementsByClassName("name")[targRow-1].innerHTML = 
+			document.getElementsByClassName("name")[targRow-1].innerHTML =
 				e.dataTransfer.getData('text/html');
 		}
 		else {  // Target is below the source on the screen
@@ -224,7 +225,7 @@ function votingEnable() {
 		// Apparently changing the class adjusts the 'rows' variable
 		// automatically???  But not if you combine this for loop with
 		// the one above it???
-		rows[0].setAttribute('class', 'row'); 
+		rows[0].setAttribute('class', 'row');
 	}
 }
 
