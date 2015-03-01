@@ -51,7 +51,6 @@ function onLoad() {
 
 	// Check if the user has a username stored on their computer.
 	var username = localStorage.getItem("username");
-	username = null
 	if(username != null) {
 		var form = document.forms["loginForm"];
 		if(form != null) {
