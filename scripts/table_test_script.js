@@ -8,6 +8,43 @@ function handleDragStart(e) {
 	e.dataTransfer.setData('text/html', this.getElementsByClassName("name")[0].innerHTML);
 }
 
+function gameButtonLostFocus() {
+	var table = document.getElementById("candidates");
+
+    // Remove the form from the add game row
+    var addRow = table.lastElementChild;
+    var form = addRow.lastElementChild;
+    try {  // In case it was already removed!
+	    addRow.removeChild(form);
+	}
+	catch(err) {
+	}
+
+    // Reenable clickability of add game row
+	document.getElementsByClassName("rowAdd")[0].setAttribute("onclick", "addGameButtonClicked()");
+}
+
+function addGameButtonClicked() {
+	// Add a form for the game's name
+	var inp = document.createElement("input");
+	inp.setAttribute("id", "gamename");
+	inp.setAttribute("class", "gameNameInput");
+	inp.setAttribute("onkeypress", "gameNameKeyPress()");
+	inp.setAttribute("type", "text");
+	inp.setAttribute("placeholder", "Game Name");
+	inp.setAttribute("name", "gamename");
+	inp.setAttribute("required", "true");
+	inp.setAttribute("onblur", "gameButtonLostFocus()");
+
+	document.getElementsByClassName("rowAdd")[0].appendChild(inp);
+
+	// Bring the input box into focus
+	inp.focus();
+
+	// Disable clickability on the add game row
+	document.getElementsByClassName("rowAdd")[0].removeAttribute("onclick");
+}
+
 function onLoad() {
 	// Turn voting on.
 	votingEnable();
@@ -27,6 +64,67 @@ function onLoad() {
 		}
 	}
 }
+
+function gameNameKeyPress(e) {
+	if (!e) e  = window.event;
+	var keyCode = e.keyCode || e.which;
+	if (keyCode == 13) {
+		//// Submit a request to add the game
+		// Get the new game's name from the input
+		var gamename = document.getElementById("gamename").value;
+
+		// Validate user entry
+		if(gamename == null || gamename == "" || gamename.length < 3) {
+			alert("Game name must be longer than 2 characters...");
+			return false;
+		}
+
+		// Create and send the request
+		req = new XMLHttpRequest();
+		req.open("GET", "table_test.html?gamename=" + gamename, true);
+		req.send();
+
+		//// Also add the game to the local HTML
+		var table = document.getElementById("candidates");
+
+		// Create the new entry
+		var nw = document.createElement("div");
+		nw.setAttribute("class", "row");
+		nw.setAttribute("draggable", "true");
+
+			var rank = table.children.length - 3;
+			rank = rank + 1;
+
+			var chld = document.createElement("span");
+			chld.setAttribute("class", "rank");
+			chld.innerHTML = rank.toString();
+			nw.appendChild(chld);
+
+			chld = document.createElement("span");
+			chld.setAttribute("class", "name");
+			chld.innerHTML = gamename;
+			nw.appendChild(chld);
+
+		// Add the new row
+		table.insertBefore(nw, table.lastElementChild);
+
+		// Register drag and drop handlers on new row
+		nw.addEventListener('dragstart', handleDragStart, false);
+	    nw.addEventListener('dragenter', handleDragEnter, false)
+	    nw.addEventListener('dragover', handleDragOver, false);
+	    nw.addEventListener('dragleave', handleDragLeave, false);
+		nw.addEventListener('drop', handleDrop, false);
+	    nw.addEventListener('dragend', handleDragEnd, false);
+
+	    // Remove form and make add game row clickable
+	    gameButtonLostFocus();
+
+		return false;
+	}
+}
+
+// function validateGameName() {
+// }
 
 function validateUsername() {
 	var x = document.forms["loginForm"]["username"].value;
@@ -152,6 +250,6 @@ var rows = document.querySelectorAll('#candidates .rowNoDrag');
     row.addEventListener('dragenter', handleDragEnter, false)
     row.addEventListener('dragover', handleDragOver, false);
     row.addEventListener('dragleave', handleDragLeave, false);
-	row.addEventListener('drop', handleDrop, false)  
-    row.addEventListener('dragend', handleDragEnd, false);;
+	row.addEventListener('drop', handleDrop, false);
+    row.addEventListener('dragend', handleDragEnd, false);
 });

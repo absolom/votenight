@@ -34,7 +34,10 @@
 			<span class="rank">{{ item[0] }}</span><span class="name">{{ item[1] }}</span>
 		</div>
 	{% endfor %}
-	<!-- TODO: Add and implement a button for adding new rows. -->
+	<div class="rowAdd" onclick="addGameButtonClicked()" draggable="{{ draggable }}">
+		<span class="rank">+</span><span class="name"> </span>
+		<!-- <input id="gamename" class="gameNameInput" onkeypress="gameNameKeyPress()" type="text" placeholder="Game Name" name="gamename" required> -->
+	</div>
 </div>
 
 <br>
@@ -42,40 +45,39 @@
 <br>
 
 {% if days %}
-<div id="period">
-<span class="voteMsg">Voting Ends In {{ days }} Days, {{ hours }} Hours, {{ minutes }} Minutes</span>
-</div>
+	<div id="period">
+		<span class="voteMsg">Voting Ends In {{ days }} Days, {{ hours }} Hours, {{ minutes }} Minutes</span>
+	</div>
 {% endif %}
 
 <br>
 <br>
 
 {% if winner1 %}
-<div>
-<span class="winnerLabel">Previous Winners</span>
-</div>
-<br>
+	<div>
+		<span class="winnerLabel">Previous Winners</span>
+	</div>
+	<br>
 
-{% if winner1 %}
-<div class="winnerMsg" id="winner1">
-<span class="winner1">1. {{ winner1 }}</span>
-</div>
-<br>
-{% endif %}
+	{% if winner1 %}
+		<div class="winnerMsg" id="winner1">
+			<span class="winner1">1. {{ winner1 }}</span>
+		</div>
+		<br>
+	{% endif %}
 
-{% if winner2 %}
-<div class="winnerMsg" id="winner2">
-<span class="winner2">2. {{ winner2 }}</span>
-</div>
-<br>
-{% endif %}
+	{% if winner2 %}
+		<div class="winnerMsg" id="winner2">
+			<span class="winner2">2. {{ winner2 }}</span>
+		</div>
+		<br>
+	{% endif %}
 
-{% if winner3 %}
-<div class="winnerMsg" id="winner3">
-<span class="winner3">3. {{ winner3 }}</span>
-</div>
-{% endif %}
-
+	{% if winner3 %}
+		<div class="winnerMsg" id="winner3">
+			<span class="winner3">3. {{ winner3 }}</span>
+		</div>
+	{% endif %}
 {% endif %}
 
 <script src="/scripts/table_test_script.js"></script>

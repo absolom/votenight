@@ -27,27 +27,30 @@ def initialize_db():
     """
     Populates the DB with some Candidates for testing.
     """
-    cd = Candidate()
+    container = CandidateContainer(id='1')
+    container.put()
+
+    cd = Candidate(parent=container.key)
     cd.name = 'Team Fortress 2'
     cd.put()
 
-    cd = Candidate()
+    cd = Candidate(parent=container.key)
     cd.name = 'Hammerwatch'
     cd.put()
 
-    cd = Candidate()
+    cd = Candidate(parent=container.key)
     cd.name = 'League of Legends'
     cd.put()
 
-    cd = Candidate()
+    cd = Candidate(parent=container.key)
     cd.name = 'Planetside 2'
     cd.put()
 
-    cd = Candidate()
+    cd = Candidate(parent=container.key)
     cd.name = 'Diablo 3'
     cd.put()
 
-    cd = Candidate()
+    cd = Candidate(parent=container.key)
     cd.name = 'Guild Wars 2'
     cd.put()
 
@@ -68,6 +71,9 @@ class Winner(ndb.Model):
 
 class Candidate(ndb.Model):
     name = ndb.StringProperty()
+
+class CandidateContainer(ndb.Model):
+    unused = ndb.StringProperty()
 
 class Vote(ndb.Model):
     user = ndb.KeyProperty(kind=User)
@@ -183,7 +189,64 @@ class MainPage(webapp2.RequestHandler):
         except KeyError:
             pass 
 
+        try:
+            # Check if the command is adding a game
+            gmName = self.request.GET['gamename']
+
+            logging.info("Adding " + gmName)
+
+            # Create the new candidate and put it in the db
+            key = ndb.Key('CandidateContainer', '1')
+            cd = Candidate(parent=key)
+            cd.name = gmName
+            cd.put()
+
+            cds = Candidate.query(ancestor=key).fetch()
+            for c in cds:
+                logging.info("Found: " + c.name)
+
+        except KeyError:
+            pass
+
         if usr is not None:
+            # Get all of the votes sorted by rank and then time
+            votes = Vote.query(ancestor=usr.key).order(Vote.rank, Vote.time).fetch()
+
+            # Iterate through the votes adding each to the table's contents
+            lastRank = 0
+            for v in votes:
+                game = v.game.get()
+                table_contents.append([str(v.rank), game.name])
+                lastRank = v.rank
+
+            # Iterate through all of the candidates and add those that are unvoted for
+            key = ndb.Key('CandidateContainer', '1')
+            candidates = Candidate.query(ancestor=key).fetch()
+            addedVotes = []
+            for c in candidates:
+                found = False
+                for v in votes:
+                    if v.game == c.key:
+                        found = True
+                        break
+                if not found:
+                    newRank = lastRank + 1
+
+                    # Create a new database entry
+                    vote = Vote(parent=usr.key)
+                    vote.rank = newRank
+                    vote.game = c.key
+                    vote.user = usr.key
+                    addedVotes.append(vote)
+
+                    logging.info("Adding a new vote for \"" + vote.game.get().name + "\" to " + usr.name)
+
+                    # Add to the template data
+                    table_contents.append([str(newRank), c.name])
+                    lastRank = newRank
+            # Push all the new votes to the db
+            ndb.put_multi(addedVotes)
+
             try:
                 #### Pull parameters from the URI
 
@@ -210,7 +273,7 @@ class MainPage(webapp2.RequestHandler):
                     ##      Source takes dest's -1's rank
                     logging.info("Doing insertion: " + srcRank + "->" + destRank)
 
-                    votes = Vote.query(Vote.user == usr.key).order(Vote.rank).fetch()
+                    votes = Vote.query(ancestor=usr.key).order(Vote.rank).fetch()
                     movingGameKey = votes[int(srcRank)-1].game
 
                     if int(srcRank) > int(destRank):
@@ -237,42 +300,6 @@ class MainPage(webapp2.RequestHandler):
 
             #### Generate the parameters for the html template (jinja2)
 
-            # Get all of the votes sorted by rank and then time
-            votes = Vote.query(ancestor=usr.key).order(Vote.rank, Vote.time).fetch()
-
-            # Iterate through the votes adding each to the table's contents
-            lastRank = 0
-            for v in votes:
-                game = v.game.get()
-                table_contents.append([str(v.rank), game.name])
-                lastRank = v.rank
-
-            # Iterate through all of the candidates and add those that are unvoted for
-            candidates = Candidate.query().fetch()
-            addedVotes = []
-            for c in candidates:
-                found = False
-                for v in votes:
-                    if v.game == c.key:
-                        found = True
-                        break
-                if not found:
-                    newRank = lastRank + 1
-
-                    # Create a new database entry
-                    vote = Vote(parent=usr.key)
-                    vote.rank = newRank
-                    vote.game = c.key
-                    vote.user = usr.key
-                    addedVotes.append(vote)
-
-                    logging.info("Adding a new vote for \"" + vote.game.get().name + "\" to " + usr.name)
-
-                    # Add to the template data
-                    table_contents.append([str(newRank), c.name])
-                    lastRank = newRank
-            # Push all the new votes to the db
-            ndb.put_multi(addedVotes)
 
         ## Build the voting results portion of the page
         # Get the last voting period

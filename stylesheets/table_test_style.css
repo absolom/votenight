@@ -1,3 +1,8 @@
+.gameNameInput {
+  position: relative;
+  left: 45px;
+  top: 7px;
+}
 .winnerLabel {
   position: absolute;
   text-align: center;
@@ -78,6 +83,18 @@
 	left: 50px;
 	top: 10px;
   font-size: 120%;
+}
+.rowAdd {
+  height: 40px;
+  width: 450px;
+  border: 2px solid #aaaaaa;
+  margin-top: 2px;
+  -webkit-border-radius: 10px;
+  -ms-border-radius: 10px;
+  -moz-border-radius: 10px;
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
 }
 .row {
   height: 40px;
