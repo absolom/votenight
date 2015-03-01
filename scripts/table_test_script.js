@@ -8,6 +8,26 @@ function handleDragStart(e) {
 	e.dataTransfer.setData('text/html', this.getElementsByClassName("name")[0].innerHTML);
 }
 
+function onLoad() {
+	// Turn voting on.
+	votingEnable();
+
+	// Check if the user has a username stored on their computer.
+	var username = localStorage.getItem("username");
+	if(username != null) {
+		var form = document.forms["loginForm"];
+		if(form != null) {
+			var field = form["username"];
+			if(field != null) {
+				// They did have a username stored, so fill in the login form and submit it
+				// to autologin.
+				field.value = username;
+				form.submit();
+			}
+		}
+	}
+}
+
 function validateUsername() {
 	var x = document.forms["loginForm"]["username"].value;
 	if (x == null || x == "" || x.length < 3) {
@@ -22,6 +42,7 @@ function validateUsername() {
 			return false;
 		}
 	}
+	localStorage.setItem("username", x);
 }
 
 function handleDrop(e) {
