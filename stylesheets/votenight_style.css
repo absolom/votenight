@@ -1,7 +1,8 @@
 .gameNameInput {
-  position: relative;
+  position: absolute;
   left: 45px;
-  top: 7px;
+  top: 11px;
+  width: 300px;
 }
 .winnerLabel {
   position: absolute;
@@ -22,7 +23,7 @@
 .invisible {
   background: transparent;
   border: none !important;
-  font-size: 0;  
+  font-size: 0;
 }
 .voteMsg {
   position: absolute;
@@ -72,19 +73,20 @@
 }
 .rank {
   color: #666;
-  position: relative;
+  position: absolute;
   left: 20px;
-  top: 8px;
+  top: 11px;
   font-size: 100%;
 }
 .name {
 	color: #000;
-	position: relative;
-	left: 50px;
-	top: 10px;
+  position: absolute;
+	left: 55px;
+	top: 9px;
   font-size: 120%;
 }
 .rowAdd {
+  position: relative;
   height: 40px;
   width: 450px;
   border: 2px solid #aaaaaa;
@@ -97,6 +99,7 @@
   cursor: pointer;
 }
 .row {
+  position: relative;
   height: 40px;
   width: 450px;
   border: 2px solid #aaaaaa;
@@ -109,6 +112,7 @@
   cursor: move;
 }
 .rowNoDrag {
+  position: relative;
   height: 40px;
   width: 450px;
   border: 2px solid #aaaaaa;
