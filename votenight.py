@@ -501,6 +501,7 @@ class MainPage(webapp2.RequestHandler):
         currUserEntity = None
         gamenameStr = None
         votes = None
+        candidates = None
 
         try:
             gamenameStr = self.request.GET['gamename']
@@ -560,9 +561,10 @@ class MainPage(webapp2.RequestHandler):
         #       and thus these results should NOT be stale, yet they are sometimes)
         # If we just created a new user, wait until the DB shows all of the new Votes
         if votes is not None:
-            while len(votes) is 0:
-                time.sleep(0.1)
-                votes = Vote.query(ancestor=currUserEntity.key).order(Vote.rank, Vote.time).fetch()
+            if candidates is not None:
+                while len(votes) is not len(candidates):
+                    time.sleep(0.1)
+                    votes = Vote.query(ancestor=currUserEntity.key).order(Vote.rank, Vote.time).fetch()
 
         self.__generateAndSendWebpage(userNameStr, votes)
 
