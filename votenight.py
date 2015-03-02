@@ -3,6 +3,7 @@ import urllib
 import logging
 import datetime
 import time
+from collections import defaultdict
 
 from google.appengine.ext import ndb
 
@@ -21,11 +22,12 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 class User(ndb.Model):
     name = ndb.StringProperty()
 
-class Winner(ndb.Model):
-    name = ndb.StringProperty()
-
 class Candidate(ndb.Model):
     name = ndb.StringProperty()
+
+class Winner(ndb.Model):
+    game = ndb.KeyProperty(kind=Candidate)
+    rank = ndb.IntegerProperty()
 
 class CandidateContainer(ndb.Model):
     unused = ndb.StringProperty()
@@ -50,26 +52,49 @@ class Tally(webapp2.RequestHandler):
     entity stores the date i
     """
 
-    def __tallyVotes(self):
+    def __tallyVotes(self, votes, minRank, maxRank):
         """
-        Tallys the current votes.
+        Takes a flat array of Vote instances and converts it to a Map of
+        game name to number of times voted for.
 
-        Returns: A 3-tuple of the top 3 games.
+        Return:
+            firstRankTally (dict{ndb.key->int}) Number of times each game was ranked first
+            lastRankTally (dict{ndb.key->int}) Number of times each game was ranked last
         """
-        logging.info("__tallyVotes() called...")
-        cds = Candidate.query().fetch()
-        first = None
-        second = None
-        third = None
-        for c in cds:
-            if c.name == "Guild Wars 2":
-                first = c
-            elif c.name == "Hammerwatch":
-                second = c
-            elif c.name == "Team Fortress 2":
-                third = c
+        firstRankTally = defaultdict(lambda: 0, {})
+        lastRankTally = defaultdict(lambda: 0, {})
+        for vote in votes:
+            candKey = vote.game
+            if vote.rank == minRank:
+                firstRankTally[candKey] += 1
+            elif vote.rank == maxRank:
+                lastRankTally[candKey] += 1
 
-        return (first, second, third)
+        return (firstRankTally, lastRankTally)
+
+
+    def __findBiggestTally(self, tallyDict):
+        """
+        Takes a map of game name to number of times voted for and finds the game
+        with the most number of votes.
+
+        Return:
+            winner (ndb.key) ndb Key of the winning game.
+            winnerVotes (int) Number of votes cast for the winner.
+            winnerUnique (bool) True if the winner was unique (no ties).
+        """
+        winner = ''
+        winnerVotes = 0
+        winnerUnique = True
+        for game, tally in tallyDict.iteritems():
+            if winnerVotes < tally:
+                winnerVotes = tally
+                winner = game
+                winnerUnique = True
+            elif winnerVotes == tally:
+                winnerUnique = False
+
+        return (winner, winnerVotes, winnerUnique)
 
     def get(self):
         """
@@ -79,39 +104,118 @@ class Tally(webapp2.RequestHandler):
         """
         logging.info("Tally was called!")
 
-        ## Invoke the voting tally function to return the top three games
-        (first, second, third) = __tallyVotes()
+        winners = []
+
+        # Get all of the votes
+        votes = Vote.query().fetch()
+        # TODO: Filter out votes for inactive users
+        votesOrig = list(votes)
+
+        # Get all the candidates to figure out the min and max rank
+        candidates = Candidate.query().fetch()
+        maxRank = len(candidates)
+
+        # Get all the users to figure out total # of votes
+        users = User.query().fetch()
+        # TODO: Filter out inactive users
+        totalVotes = len(users)
+        if totalVotes == 0:
+            return
+
+        i = 0
+        minRank = 1
+        while True:
+            logging.info("Iterating...")
+            # Tally up the votes for first place and last place
+            (firstRankTally, lastRankTally) = self.__tallyVotes(votes, minRank, maxRank)
+            logging.info("firstRankTally size " + str(len(firstRankTally)))
+
+            # Find the game in first place
+            (winner, winnerVotes, winnerUnique) = self.__findBiggestTally(firstRankTally)
+
+            # Find the game in last place
+            (looser, looserVotes, looserUnique) = self.__findBiggestTally(lastRankTally)
+
+            # Check if majority and unique
+            if (float(winnerVotes) / float(totalVotes) >= 0.5 and winnerUnique is True) or minRank == maxRank:
+                if minRank == maxRank:
+                    # True Tie
+                    logging.info("This winner was a tie!")
+                # Found a winner, add it to the winners list
+                winners.append(winner)
+                minRank += 1
+
+                # Remove all votes for the winner
+                logging.info("Start size: " + str(len(votes)))
+                votesOrig = filter(lambda x: x.game != winner, votesOrig)
+                logging.info("End size: " + str(len(votes)))
+
+                votes = votesOrig
+                maxRank = len(votes)
+            else:
+                maxRank -= 1
+                # No unique winner, remove game in last and go again
+                logging.info("Start size: " + str(len(votes)))
+                votes = filter(lambda x: x.game != looser, votes)
+                logging.info("End size: " + str(len(votes)))
+
+            i = i + 1
+
+            if i >= 50:
+                logging.info("Something is wrong!")
+                break
+
+            if len(winners) >= 3:
+                break
+
+        ###########
 
         # Get the last period so we know the next index
         lastPeriod = VotingPeriod.query().order(-VotingPeriod.index).get()
 
-        # Create the voting period results db item
+        # Create the VotingPeriod
         vp = VotingPeriod()
         vp.index = lastPeriod.index + 1
+        logging.info("Creating period with index " + str(vp.index))
 
         # Figure out the dates
         today = datetime.date.today()
         vp.endDate = today
 
         # Push the voting period to the DB
-        vp.put()
+        vpKey = vp.put()
 
-        # Create copies of the winning candidates
-        cd1 = Winner(parent=vp.key)
-        cd1.name = first.name
-        cd1.rank = 1
+        # Copy the Candidates and change the winners to map to their clones (parent is VotingPeriod)
+        candidatesClones = []
+        # for c in candidates:
+        for i in range(0,len(candidates)):
+            c = candidates[i]
+            clone = Candidate(parent=vpKey)
+            clone.name = c.name
+            candidatesClones.append(c)
+        logging.info(str(len(candidatesClones)) + " Candidate clones created...")
 
-        cd2 = Winner(parent=vp.key)
-        cd2.name = second.name
-        cd2.rank = 2
+        winnerToClones = []
+        for w in winners:
+            logging.info("winner: " + w.get().name)
+            for i in range(0, len(candidates)):
+                if candidates[i].key == w:
+                    winnerToClones.append(candidatesClones[i].key)
+                    break
+        logging.info("size of winnerToClones: " + str(len(winnerToClones)))
 
-        cd3 = Winner(parent=vp.key)
-        cd3.name = third.name
-        cd3.rank = 3
+        # Create Winner entities for each winner (parent is VotingPeriod)
+        winnerEntities = []
+        for i in range(0, len(winnerToClones)):
+            w = Winner(parent=vpKey)
+            w.rank = i+1
+            w.game = winnerToClones[i]
+            logging.info("Winner entity: " + w.game.get().name)
+            winnerEntities.append(w)
+        logging.info("size of winnerEntities: " + str(len(winnerEntities)))
 
-        # Push the winner instances to the DB
-        keys = ndb.put_multi([cd1, cd2, cd3])
-
+        # Push all of this to the DB
+        ndb.put_multi(candidatesClones + winnerEntities)
 
 ##############################################
 
@@ -357,10 +461,10 @@ class MainPage(webapp2.RequestHandler):
             template_values['minutes'] = minutes
 
             # Retrieve winners from the last voting period
-            winners = Winner.query(ancestor=lastPeriod.key).fetch()
+            winners = Winner.query(ancestor=lastPeriod.key).order(Winner.rank).fetch()
 
             for i in range(0, len(winners)):
-                template_values['winner' + str(i+1)] = winners[i].name
+                template_values['winner' + str(i+1)] = winners[i].game.get().name
 
         ## Fill out the rest of the template
         template_values['username'] = currUserNameStr
