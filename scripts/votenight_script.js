@@ -152,10 +152,10 @@ function handleDrop(e) {
 		//// Figure out the ranks of the rows being dragged or dropped
 
 		// Store the rank of the row on which the drop occurred
-		targRow = this.getElementsByClassName("rank")[0].innerHTML;
+		targRow = parseInt(this.getElementsByClassName("rank")[0].innerHTML);
 
 		// Store the rank of the row which is being dragged
-		srcRow = dragSrcEl.getElementsByClassName("rank")[0].innerHTML;
+		srcRow = parseInt(dragSrcEl.getElementsByClassName("rank")[0].innerHTML);
 
 		//// Update the local HTML
 
