@@ -3,6 +3,7 @@ import urllib
 import logging
 import datetime
 import time
+import operator
 from collections import defaultdict
 
 from google.appengine.ext import ndb
@@ -96,79 +97,101 @@ class Tally(webapp2.RequestHandler):
 
         return (winner, winnerVotes, winnerUnique)
 
-    def get(self):
-        """
-        Ends the voting period, tallies votes, and updates the database.
+    def __findWinners(candidates, users, votes):
+        neededForMajority = math.ceil(float(len(users)) / 2.0)
 
-        See cron.yaml
-        """
-        logging.info("Tally was called!")
+        ## For each game, find the cheapest combination of votes that produces a majority.
+        ##    'cost' is measured by the sum of the ranks of each vote
+        ##      e.g. Voter A ranks game 1, voter B ranks game 4, voter C ranks game 3,
+        ##      assuming there are 5 or less voters then this makes a majority and the
+        ##      'cost' would be 1 + 4 + 3 = 8.
+        for c in candidates:
+            ranks = []
+            for u in users:
+                for v in votes:
+                    if v.parent == u.key and v.game == c.key:
+                        # This was a vote for c by user u, record the rank
+                        ranks.append(v.rank)
+                        # Skip to next user
+                        break
+            ## Find the cheapest majority for the current game across all users
+            # Sort the ranks of each vote in ascending order
+            ranks.sort()
+            # Take the minimum number of ranks needed for a majority
+            ranks = ranks[0:neededForMajority]
+            # Store the maximum rank in the cheapest majority set
+            maxes.append(math.max(ranks))
+            # Store the sum of ranks in the cheapest majority set
+            sums.append(sum(ranks))
+
+        ## Iterate over each game and find the overall cheapest majority
+        ##   using the maximum rank in each majority as a tie breaker if
+        ##   possible.
+        winnerInd = 0
+        ties = []  ## If there are multiple majorities with same sum and max, then they are tied
+        lowestSum = sums[0]
+        leastMax = maxes[0]
+        for i in range(0,len(candidates)):
+            if sums[i] < lowestSum:
+                # Has the lowest sum of ranks, new winner
+                lowestSum = sums[i]
+                leastMax = maxes[i]
+                winnerInd = i
+                ties = []
+            elif sums[i] == lowestSum:
+                if maxes[i] < leastMax:
+                    # Has same sum but smaller max, new winner
+                    winnerInd = i
+                    leastMax = maxes[i]
+                    ties = []
+                elif maxes[i] == leastMax:
+                    # Has the same sum and max rank, it's a tie
+                    ties.append(i)
+
+        return ties.append(winnerInd)
+
+    def __findAllWinners(self, candidates, users, votes):
+        users = users.copy()
+
+        # Make copies of the lists, we are going to destroy them
+        candidates = candidates.copy()
+        votes = votes.copy()
 
         winners = []
+        # Find the top 3 games (or as many as possible)
+        while len(winners) < 3 and len(winners) < len(candidates)
 
-        # Get all of the votes
-        votes = Vote.query().fetch()
-        # TODO: Filter out votes for inactive users
-        votesOrig = list(votes)
+            # Find the next winner(s) based on the current set of votes
+            newWinners = __findWinners(candidates, users, votes)
+            for w in newWinners:
+                # TODO: Handle ties below when Winner entities are created
+                # Record the winner(s)
+                winners.append(candidates[w].key)
 
-        # Get all the candidates to figure out the min and max rank
-        candidates = Candidate.query().fetch()
-        maxRank = len(candidates)
+            # Compact the voting ranks for each user
+            for u in users:
+                # Grab all the votes for the current user
+                usersVotes = filter(lambda v: v.user == u.key, votes)
+                # Sort them in ascending order
+                userVotes.sort(key = lambda v: v.rank)
+                # Compact the list
+                rank = 1
+                for v in userVotes:
+                    v.rank = rank
+                    rank += 1
 
-        # Get all the users to figure out total # of votes
-        users = User.query().fetch()
-        # TODO: Filter out inactive users
-        totalVotes = len(users)
-        if totalVotes == 0:
-            return
+            ## Remove the winner's votes and candidate
+            # Convert the list of candidates to a list of their keys
+            newWinnerKeys = map(lambda x: candidates[x].key, newWinners)
+            # Remove all votes for a candidate whos key is in newWinnerKeys
+            votes = filter(lambda x: any(k == x.game for any k in newWinnerKeys), votes)
+            # Remove all of the candidates who have won
+            candidates = filter(lambda c: not any(k == c.key for any k in newWinnerKeys), candidates)
 
-        i = 0
-        minRank = 1
-        while True:
-            logging.info("Iterating...")
-            # Tally up the votes for first place and last place
-            (firstRankTally, lastRankTally) = self.__tallyVotes(votes, minRank, maxRank)
-            logging.info("firstRankTally size " + str(len(firstRankTally)))
+        return winners
 
-            # Find the game in first place
-            (winner, winnerVotes, winnerUnique) = self.__findBiggestTally(firstRankTally)
-
-            # Find the game in last place
-            (looser, looserVotes, looserUnique) = self.__findBiggestTally(lastRankTally)
-
-            # Check if majority and unique
-            if (float(winnerVotes) / float(totalVotes) >= 0.5 and winnerUnique is True) or minRank == maxRank:
-                if minRank == maxRank:
-                    # True Tie
-                    logging.info("This winner was a tie!")
-                # Found a winner, add it to the winners list
-                winners.append(winner)
-                minRank += 1
-
-                # Remove all votes for the winner
-                logging.info("Start size: " + str(len(votes)))
-                votesOrig = filter(lambda x: x.game != winner, votesOrig)
-                logging.info("End size: " + str(len(votes)))
-
-                votes = votesOrig
-                maxRank = len(votes)
-            else:
-                maxRank -= 1
-                # No unique winner, remove game in last and go again
-                logging.info("Start size: " + str(len(votes)))
-                votes = filter(lambda x: x.game != looser, votes)
-                logging.info("End size: " + str(len(votes)))
-
-            i = i + 1
-
-            if i >= 50:
-                logging.info("Something is wrong!")
-                break
-
-            if len(winners) >= 3:
-                break
-
-        ###########
+    def __recordVotingPeriodResults(self, winners, candidates):
+        #### Create the VotingPeriod database entities
 
         # Get the last period so we know the next index
         lastPeriod = VotingPeriod.query().order(-VotingPeriod.index).get()
@@ -214,8 +237,28 @@ class Tally(webapp2.RequestHandler):
             winnerEntities.append(w)
         logging.info("size of winnerEntities: " + str(len(winnerEntities)))
 
+        # TODO: Clone the user and voting entities and store under the VotingPeriod
+
         # Push all of this to the DB
         ndb.put_multi(candidatesClones + winnerEntities)
+
+    def get(self):
+        """
+        Ends the voting period, tallies votes, and updates the database.
+
+        See cron.yaml
+        """
+        logging.info("Tally was called!")
+
+        candidates = Candidate.query().fetch()
+        users = User.query().fetch()
+        votes = Vote.query().fetch()
+
+        # Get a sorted list of Candidates, sorted by voters' preference
+        winners = __findAllWinners(candidates, users, votes)
+
+        # Record the voting results
+        __recordVotingPeriodResults(winners)
 
 ##############################################
 
