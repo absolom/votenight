@@ -1,4 +1,5 @@
 import os
+import math
 import urllib
 import logging
 import datetime
@@ -97,19 +98,22 @@ class Tally(webapp2.RequestHandler):
 
         return (winner, winnerVotes, winnerUnique)
 
-    def __findWinners(candidates, users, votes):
-        neededForMajority = math.ceil(float(len(users)) / 2.0)
+    def __findWinners(self, candidates, users, votes):
+        neededForMajority = int(math.ceil(float(len(users)) / 2.0))
+        logging.info("neededForMajority: " + str(neededForMajority))
 
         ## For each game, find the cheapest combination of votes that produces a majority.
         ##    'cost' is measured by the sum of the ranks of each vote
         ##      e.g. Voter A ranks game 1, voter B ranks game 4, voter C ranks game 3,
         ##      assuming there are 5 or less voters then this makes a majority and the
         ##      'cost' would be 1 + 4 + 3 = 8.
+        maxes = []
+        sums = []
         for c in candidates:
             ranks = []
             for u in users:
                 for v in votes:
-                    if v.parent == u.key and v.game == c.key:
+                    if v.key.parent() == u.key and v.game == c.key:
                         # This was a vote for c by user u, record the rank
                         ranks.append(v.rank)
                         # Skip to next user
@@ -117,18 +121,21 @@ class Tally(webapp2.RequestHandler):
             ## Find the cheapest majority for the current game across all users
             # Sort the ranks of each vote in ascending order
             ranks.sort()
+            logging.info("Length of ranks: " + str(len(ranks)))
             # Take the minimum number of ranks needed for a majority
             ranks = ranks[0:neededForMajority]
             # Store the maximum rank in the cheapest majority set
-            maxes.append(math.max(ranks))
+            maxes.append(max(ranks))
+            logging.info("Length of maxes: " + str(len(maxes)))
             # Store the sum of ranks in the cheapest majority set
             sums.append(sum(ranks))
+            logging.info("Length of sums: " + str(len(sums)))
 
         ## Iterate over each game and find the overall cheapest majority
         ##   using the maximum rank in each majority as a tie breaker if
         ##   possible.
         winnerInd = 0
-        ties = []  ## If there are multiple majorities with same sum and max, then they are tied
+        winners = []  ## If there are multiple majorities with same sum and max, then they are tied
         lowestSum = sums[0]
         leastMax = maxes[0]
         for i in range(0,len(candidates)):
@@ -136,58 +143,58 @@ class Tally(webapp2.RequestHandler):
                 # Has the lowest sum of ranks, new winner
                 lowestSum = sums[i]
                 leastMax = maxes[i]
-                winnerInd = i
-                ties = []
+                winners = [i]
             elif sums[i] == lowestSum:
                 if maxes[i] < leastMax:
                     # Has same sum but smaller max, new winner
-                    winnerInd = i
                     leastMax = maxes[i]
-                    ties = []
+                    winners = [i]
                 elif maxes[i] == leastMax:
                     # Has the same sum and max rank, it's a tie
-                    ties.append(i)
+                    winners.append(i)
 
-        return ties.append(winnerInd)
+        return winners
 
     def __findAllWinners(self, candidates, users, votes):
-        users = users.copy()
-
         # Make copies of the lists, we are going to destroy them
-        candidates = candidates.copy()
-        votes = votes.copy()
+        candidates = list(candidates)
+        votes = list(votes)
 
         winners = []
         # Find the top 3 games (or as many as possible)
-        while len(winners) < 3 and len(winners) < len(candidates)
+        while len(winners) < 3 and len(winners) < len(candidates):
 
             # Find the next winner(s) based on the current set of votes
-            newWinners = __findWinners(candidates, users, votes)
+            newWinners = self.__findWinners(candidates, users, votes)
+            logging.info("newWinners: " + str(newWinners))
             for w in newWinners:
                 # TODO: Handle ties below when Winner entities are created
                 # Record the winner(s)
                 winners.append(candidates[w].key)
+
+            ## Remove the winner's votes and candidate
+            # Convert the list of candidates to a list of their keys
+            newWinnerKeys = map(lambda x: candidates[x].key, newWinners)
+            logging.info("newWinnerKeys: " + str(newWinnerKeys))
+            # Remove all votes for a candidate whos key is in newWinnerKeys
+            votes = filter(lambda x: not any(k == x.game for k in newWinnerKeys), votes)
+            # Remove all of the candidates who have won
+            candidates = filter(lambda c: not any(k == c.key for k in newWinnerKeys), candidates)
 
             # Compact the voting ranks for each user
             for u in users:
                 # Grab all the votes for the current user
                 usersVotes = filter(lambda v: v.user == u.key, votes)
                 # Sort them in ascending order
-                userVotes.sort(key = lambda v: v.rank)
+                usersVotes.sort(key = lambda v: v.rank)
+                logging.info("sorted usersVotes: " + str(usersVotes))
                 # Compact the list
                 rank = 1
-                for v in userVotes:
+                for v in usersVotes:
                     v.rank = rank
                     rank += 1
 
-            ## Remove the winner's votes and candidate
-            # Convert the list of candidates to a list of their keys
-            newWinnerKeys = map(lambda x: candidates[x].key, newWinners)
-            # Remove all votes for a candidate whos key is in newWinnerKeys
-            votes = filter(lambda x: any(k == x.game for any k in newWinnerKeys), votes)
-            # Remove all of the candidates who have won
-            candidates = filter(lambda c: not any(k == c.key for any k in newWinnerKeys), candidates)
-
+        logging.info("winners: " + str(map(lambda w: w.get(), winners)))
         return winners
 
     def __recordVotingPeriodResults(self, winners, candidates):
@@ -255,10 +262,10 @@ class Tally(webapp2.RequestHandler):
         votes = Vote.query().fetch()
 
         # Get a sorted list of Candidates, sorted by voters' preference
-        winners = __findAllWinners(candidates, users, votes)
+        winners = self.__findAllWinners(candidates, users, votes)
 
         # Record the voting results
-        __recordVotingPeriodResults(winners)
+        self.__recordVotingPeriodResults(winners, candidates)
 
 ##############################################
 
