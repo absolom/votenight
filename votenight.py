@@ -156,46 +156,33 @@ class Tally(webapp2.RequestHandler):
         return winners
 
     def __findAllWinners(self, candidates, users, votes):
+        """
+        Order all candidates based on the voters' preferences.
+
+        Uses a modified Borda Count preferential voting method. This
+        method was chosen because it tries to find the best game on
+        average across all of the voters.  It is assumed this will
+        provide the best results for selecting game night games as
+        it's less likely to pick a game that anyone hates.
+
+        @param [in] candidates List of all Candidate instances.
+        @param [in] users List of all User instances.
+        @param [in] votes List of all Vote instances.
+
+        @return A list of the candidates sorted by descending
+                preference based on the voters' preferences.
+        """
         # Make copies of the lists, we are going to destroy them
         candidates = list(candidates)
         votes = list(votes)
 
-        winners = []
-        # Find the top 3 games (or as many as possible)
-        while len(winners) < 3 and len(winners) < len(candidates):
+        # For each candidate, calculate the total score.
+        scores = {}
+        for c in candidates:
+            ranks = map(lambda v: v.rank if v.user == c.key else 0, votes)
+            scores[c] = sum(ranks)
 
-            # Find the next winner(s) based on the current set of votes
-            newWinners = self.__findWinners(candidates, users, votes)
-            logging.info("newWinners: " + str(newWinners))
-            for w in newWinners:
-                # TODO: Handle ties below when Winner entities are created
-                # Record the winner(s)
-                winners.append(candidates[w].key)
-
-            ## Remove the winner's votes and candidate
-            # Convert the list of candidates to a list of their keys
-            newWinnerKeys = map(lambda x: candidates[x].key, newWinners)
-            logging.info("newWinnerKeys: " + str(newWinnerKeys))
-            # Remove all votes for a candidate whos key is in newWinnerKeys
-            votes = filter(lambda x: not any(k == x.game for k in newWinnerKeys), votes)
-            # Remove all of the candidates who have won
-            candidates = filter(lambda c: not any(k == c.key for k in newWinnerKeys), candidates)
-
-            # Compact the voting ranks for each user
-            for u in users:
-                # Grab all the votes for the current user
-                usersVotes = filter(lambda v: v.user == u.key, votes)
-                # Sort them in ascending order
-                usersVotes.sort(key = lambda v: v.rank)
-                logging.info("sorted usersVotes: " + str(usersVotes))
-                # Compact the list
-                rank = 1
-                for v in usersVotes:
-                    v.rank = rank
-                    rank += 1
-
-        logging.info("winners: " + str(map(lambda w: w.get(), winners)))
-        return winners
+        return sorted(candidates, key=lambda c: scores[c])
 
     def __recordVotingPeriodResults(self, winners, candidates):
         #### Create the VotingPeriod database entities
