@@ -54,107 +54,6 @@ class Tally(webapp2.RequestHandler):
     entity stores the date i
     """
 
-    def __tallyVotes(self, votes, minRank, maxRank):
-        """
-        Takes a flat array of Vote instances and converts it to a Map of
-        game name to number of times voted for.
-
-        Return:
-            firstRankTally (dict{ndb.key->int}) Number of times each game was ranked first
-            lastRankTally (dict{ndb.key->int}) Number of times each game was ranked last
-        """
-        firstRankTally = defaultdict(lambda: 0, {})
-        lastRankTally = defaultdict(lambda: 0, {})
-        for vote in votes:
-            candKey = vote.game
-            if vote.rank == minRank:
-                firstRankTally[candKey] += 1
-            elif vote.rank == maxRank:
-                lastRankTally[candKey] += 1
-
-        return (firstRankTally, lastRankTally)
-
-
-    def __findBiggestTally(self, tallyDict):
-        """
-        Takes a map of game name to number of times voted for and finds the game
-        with the most number of votes.
-
-        Return:
-            winner (ndb.key) ndb Key of the winning game.
-            winnerVotes (int) Number of votes cast for the winner.
-            winnerUnique (bool) True if the winner was unique (no ties).
-        """
-        winner = ''
-        winnerVotes = 0
-        winnerUnique = True
-        for game, tally in tallyDict.iteritems():
-            if winnerVotes < tally:
-                winnerVotes = tally
-                winner = game
-                winnerUnique = True
-            elif winnerVotes == tally:
-                winnerUnique = False
-
-        return (winner, winnerVotes, winnerUnique)
-
-    def __findWinners(self, candidates, users, votes):
-        neededForMajority = int(math.ceil(float(len(users)) / 2.0))
-        logging.info("neededForMajority: " + str(neededForMajority))
-
-        ## For each game, find the cheapest combination of votes that produces a majority.
-        ##    'cost' is measured by the sum of the ranks of each vote
-        ##      e.g. Voter A ranks game 1, voter B ranks game 4, voter C ranks game 3,
-        ##      assuming there are 5 or less voters then this makes a majority and the
-        ##      'cost' would be 1 + 4 + 3 = 8.
-        maxes = []
-        sums = []
-        for c in candidates:
-            ranks = []
-            for u in users:
-                for v in votes:
-                    if v.key.parent() == u.key and v.game == c.key:
-                        # This was a vote for c by user u, record the rank
-                        ranks.append(v.rank)
-                        # Skip to next user
-                        break
-            ## Find the cheapest majority for the current game across all users
-            # Sort the ranks of each vote in ascending order
-            ranks.sort()
-            logging.info("Length of ranks: " + str(len(ranks)))
-            # Take the minimum number of ranks needed for a majority
-            ranks = ranks[0:neededForMajority]
-            # Store the maximum rank in the cheapest majority set
-            maxes.append(max(ranks))
-            logging.info("Length of maxes: " + str(len(maxes)))
-            # Store the sum of ranks in the cheapest majority set
-            sums.append(sum(ranks))
-            logging.info("Length of sums: " + str(len(sums)))
-
-        ## Iterate over each game and find the overall cheapest majority
-        ##   using the maximum rank in each majority as a tie breaker if
-        ##   possible.
-        winnerInd = 0
-        winners = []  ## If there are multiple majorities with same sum and max, then they are tied
-        lowestSum = sums[0]
-        leastMax = maxes[0]
-        for i in range(0,len(candidates)):
-            if sums[i] < lowestSum:
-                # Has the lowest sum of ranks, new winner
-                lowestSum = sums[i]
-                leastMax = maxes[i]
-                winners = [i]
-            elif sums[i] == lowestSum:
-                if maxes[i] < leastMax:
-                    # Has same sum but smaller max, new winner
-                    leastMax = maxes[i]
-                    winners = [i]
-                elif maxes[i] == leastMax:
-                    # Has the same sum and max rank, it's a tie
-                    winners.append(i)
-
-        return winners
-
     def __findAllWinners(self, candidates, users, votes):
         """
         Order all candidates based on the voters' preferences.
@@ -169,7 +68,7 @@ class Tally(webapp2.RequestHandler):
         @param [in] users List of all User instances.
         @param [in] votes List of all Vote instances.
 
-        @return A list of the candidates sorted by descending
+        @return A list of the candidates' keys sorted by descending
                 preference based on the voters' preferences.
         """
         # Make copies of the lists, we are going to destroy them
@@ -179,12 +78,23 @@ class Tally(webapp2.RequestHandler):
         # For each candidate, calculate the total score.
         scores = {}
         for c in candidates:
-            ranks = map(lambda v: v.rank if v.user == c.key else 0, votes)
-            scores[c] = sum(ranks)
+            ranks = map(lambda v: v.rank if v.game == c.key else 0, votes)
+            scores[c.key] = sum(ranks)
 
-        return sorted(candidates, key=lambda c: scores[c])
+        for c in candidates:
+            logging.info(c.name + " " + str(scores[c.key]))
+
+        # Sort the list of candidates in order of descending preference (winner is indx 0)
+        tmp = sorted(candidates, key=lambda c: scores[c.key])
+
+        # Convert the list of sorted candidates to sorted candidate keys
+        return map(lambda c: c.key, tmp)
 
     def __recordVotingPeriodResults(self, winners, candidates):
+        """
+        @param [in] winners
+        @param [in] candidates
+        """
         #### Create the VotingPeriod database entities
 
         # Get the last period so we know the next index
