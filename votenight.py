@@ -92,8 +92,9 @@ class Tally(webapp2.RequestHandler):
 
     def __recordVotingPeriodResults(self, winners, candidates):
         """
-        @param [in] winners
-        @param [in] candidates
+        @param [in] winners List of Candidate keys in order of voters' preference (descending
+                    order)
+        @param [in] candidates List of Candidate instances.
         """
         #### Create the VotingPeriod database entities
 
